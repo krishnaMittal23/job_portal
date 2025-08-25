@@ -1,12 +1,58 @@
-import React, { useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
 import { assets, jobsApplied } from '../assets/assets'
 import moment from 'moment'
 import Footer from '../components/Footer'
+import { AppContext } from '../context/AppContext'
+import { useAuth, useUser } from '@clerk/clerk-react'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 
 const Applications = () => {
+
+  const {user} = useUser();
+  const {getToken} = useAuth();
+
   const [isEdit, setIsEdit] = useState(false)
   const [resume, setResume] = useState(null)
+
+  const {backendUrl,userData,userApplications, fetchUserData, fetchUserApplications} = useContext(AppContext)
+
+  const updateResume = async()=>{
+
+    try {
+
+      const formData = new FormData();
+
+      formData.append('resume',resume);
+      const token = await getToken();
+
+      const {data} = await axios.post(backendUrl+'/api/users/update-resume', formData, {headers: {Authorization : `Bearer ${token}`}})
+
+      if(data.success){
+        toast.success(data.message)
+        await fetchUserData();
+      }
+      else{
+        toast.error(data.message)
+      }
+      
+    } catch (error) {
+      toast.error(error.message)
+      
+    }
+
+
+    setIsEdit(false);
+    setResume(null)
+  }
+
+
+  useEffect(()=>{
+    if(user){
+      fetchUserApplications();
+    }
+  },[user])
 
   return (
     <>
@@ -16,13 +62,13 @@ const Applications = () => {
         <section className="mb-10">
           <h2 className="text-2xl font-bold text-gray-800">Your Resume</h2>
           <div className="flex items-center gap-4 mt-4">
-            {isEdit ? (
+            {isEdit || userData && userData.resume==="" ? (
               <>
                 <label
                   htmlFor="resumeUpload"
                   className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md cursor-pointer transition"
                 >
-                  <span>Select Resume</span>
+                  <span>{resume ? resume.name : "Select Resume"}</span>
                   <img
                     src={assets.profile_upload_icon}
                     alt="upload"
@@ -37,8 +83,8 @@ const Applications = () => {
                   />
                 </label>
                 <button
-                  onClick={() => setIsEdit(false)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition shadow-md"
+                  onClick={updateResume}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition shadow-md cursor-pointer"
                 >
                   Save
                 </button>
@@ -46,7 +92,8 @@ const Applications = () => {
             ) : (
               <div className="flex gap-2">
                 <a
-                  href="#"
+                  target='_blank'
+                  href={userData.resume}
                   className="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-200 transition"
                 >
                   View Resume
@@ -77,17 +124,17 @@ const Applications = () => {
                 </tr>
               </thead>
               <tbody>
-                {jobsApplied.map((job, index) => (
+                {userApplications.map((job, index) => (
                   <tr
                     key={index}
                     className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                   >
                     <td className="py-3 px-4 flex items-center gap-2">
-                      <img src={job.logo} className="w-8 h-8 rounded" alt="logo" />
-                      <span>{job.company}</span>
+                      <img src={job.companyId.image} className="w-8 h-8 rounded" alt="logo" />
+                      <span>{job.companyId.name}</span>
                     </td>
-                    <td className="py-3 px-4">{job.title}</td>
-                    <td className="py-3 px-4 max-sm:hidden">{job.location}</td>
+                    <td className="py-3 px-4">{job.jobId.title}</td>
+                    <td className="py-3 px-4 max-sm:hidden">{job.jobId.location}</td>
                     <td className="py-3 px-4 max-sm:hidden">
                       {moment(job.date).format('ll')}
                     </td>

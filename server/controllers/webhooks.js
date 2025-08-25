@@ -1,6 +1,8 @@
 import { Webhook } from "svix";
 import User from "../models/User.js";
 
+// SEE LEC: 5:30 TO GET CLERK API AFTER DEPLOYMENT
+
 // API controller fn to manage clerk user with database
 
 export const clerkWebhooks = async (req, res) => {
